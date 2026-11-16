@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.Shortcuts" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Shortcuts.Transparent" parent="android:Theme.Translucent.NoTitleBar">
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+</resources>
