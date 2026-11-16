@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -13,8 +15,8 @@ android {
         applicationId = "pl.shortcuts.app"
         minSdk = 29          // Android 10: needed for Settings.Panel fallbacks
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
     }
 
     // Release signing is read from keystore.properties (not committed). Example:
@@ -24,7 +26,7 @@ android {
     //   keyPassword=...
     // Keep the same keystore: future updates must be signed with the same key.
     val keystorePropsFile = rootProject.file("keystore.properties")
-    val keystoreProps = java.util.Properties().apply {
+    val keystoreProps = Properties().apply {
         if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
     }
 

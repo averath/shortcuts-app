@@ -4,7 +4,7 @@ Small Kotlin/Compose Android app: **when a trigger happens → run a list of act
 First trigger: scanning a specific NFC tag. Actions: Bluetooth / Wi-Fi / mobile data on/off, and **open an app** (e.g. Storytel).
 
 ## Use
-1. Install `NfcShortcuts-0.2.0.apk` (minSdk 29 / Android 10+).
+1. Install `NfcShortcuts-0.3.0.apk` (minSdk 29 / Android 10+).
 2. Open the app → **New rule** → hold your tag to the phone (UID fills in) → keep Bluetooth, Wi-Fi, Mobile data = On → Save.
 3. Lock-screen off, phone unlocked, app closed: tap the tag. Actions run, a toast shows the result.
 
@@ -13,6 +13,12 @@ First trigger: scanning a specific NFC tag. Actions: Bluetooth / Wi-Fi / mobile 
 The preset sets Wi-Fi, Bluetooth and Mobile data = Off and adds **Open Storytel** (`grit.storytel.app`).
 Any rule can open apps: **Add app** in the editor shows all installed apps (searchable). Apps open after
 all toggles (and any confirmation panels), so Storytel ends up in front.
+
+## Start / finish feedback (v0.3.0)
+- **Start:** one short vibration + ongoing "Running Sleep…" notification.
+- **Finish:** two short vibrations (one long one if something failed) + the notification turns into
+  "Sleep finished" with ✓/✗ details, then disappears after 8 s. Fires only after all toggles, panels and app launches.
+- Allow notifications when the app asks (Android 13+); otherwise the same info is shown as a toast.
 
 ## Silent mode (Shizuku) – needed for mobile data
 Android forbids normal apps from silently toggling Wi-Fi/Bluetooth (API 29+/33+) and has never allowed mobile data.
@@ -33,6 +39,7 @@ model/Rule.kt            Rule, sealed Trigger (NfcTag), sealed Action (SetToggle
 data/RuleRepository.kt   JSON in SharedPreferences, StateFlow
 engine/RuleEngine.kt     TriggerEvent -> matching rules -> executor
 engine/ActionExecutor.kt Shizuku shell strategy + system-panel fallback
+engine/Feedback.kt       start/finish vibration + notification
 shizuku/                 AIDL user service running `sh -c` with shell privileges
 ui/NfcTriggerActivity    invisible activity started by NFC TECH_DISCOVERED dispatch
 ui/MainActivity          Compose rule list/editor; reader mode captures tag UIDs

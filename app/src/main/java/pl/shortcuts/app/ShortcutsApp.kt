@@ -3,6 +3,7 @@ package pl.shortcuts.app
 import android.app.Application
 import pl.shortcuts.app.data.RuleRepository
 import pl.shortcuts.app.engine.ActionExecutor
+import pl.shortcuts.app.engine.Feedback
 import pl.shortcuts.app.engine.RuleEngine
 import pl.shortcuts.app.shizuku.ShizukuShell
 
@@ -11,12 +12,14 @@ class ShortcutsApp : Application() {
     lateinit var repository: RuleRepository private set
     lateinit var shell: ShizukuShell private set
     lateinit var engine: RuleEngine private set
+    lateinit var feedback: Feedback private set
 
     override fun onCreate() {
         super.onCreate()
         repository = RuleRepository(this)
         shell = ShizukuShell(this)
         engine = RuleEngine(repository, ActionExecutor(this, shell))
+        feedback = Feedback(this).also { it.createChannel() }
     }
 }
 

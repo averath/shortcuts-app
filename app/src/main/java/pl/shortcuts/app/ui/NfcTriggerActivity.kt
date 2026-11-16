@@ -23,6 +23,7 @@ class NfcTriggerActivity : ComponentActivity() {
 
     private val queue = ArrayDeque<Intent>()
     private val launches = ArrayDeque<Intent>()
+    private var report: ExecutionReport? = null
     private val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { next() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,13 +44,21 @@ class NfcTriggerActivity : ComponentActivity() {
             toast("No rule for tag ${uid?.chunked(2)?.joinToString(":")} – open NFC Shortcuts to add one")
             return finish()
         }
+        app.feedback.started(engine.matching(event).map { it.name })
         lifecycleScope.launch {
-            val report = engine.handle(event)
-            toast(summary(report))
-            queue.addAll(report.pendingIntents)
-            launches.addAll(report.launchIntents)
+            val r = engine.handle(event)
+            report = r
+            queue.addAll(r.pendingIntents)
+            launches.addAll(r.launchIntents)
             next()
         }
+    }
+
+    /** Safety net: if the system closes us mid-way (e.g. user leaves a panel with Home), still signal the end. */
+    override fun onDestroy() {
+        if (isFinishing) report?.let { app.feedback.finished(it, waitingForPanels = true) }
+        report = null
+        super.onDestroy()
     }
 
     private fun next() {
@@ -57,17 +66,20 @@ class NfcTriggerActivity : ComponentActivity() {
         runCatching { launcher.launch(intent) }.onFailure { next() }
     }
 
-    /** Opened last, so the app (e.g. Storytel) ends up in front after any system panels were confirmed. */
+    /**
+     * Opened last, so the app (e.g. Storytel) ends up in front after any system panels were confirmed.
+     * The "finished" signal fires here – only once everything, including the app launch, is done.
+     */
     private fun launchAppsAndFinish() {
-        while (launches.isNotEmpty()) runCatching { startActivity(launches.removeFirst()) }
+        val r = report
+        val failedLaunches = mutableListOf<String>()
+        while (launches.isNotEmpty()) {
+            val intent = launches.removeFirst()
+            runCatching { startActivity(intent) }.onFailure { failedLaunches += "open ${intent.`package` ?: "app"}: ${it.message?.take(60)}" }
+        }
+        r?.let { app.feedback.finished(it.copy(failed = it.failed + failedLaunches), waitingForPanels = it.pendingIntents.isNotEmpty()) }
+        report = null
         finish()
-    }
-
-    private fun summary(r: ExecutionReport) = buildString {
-        append(r.ruleNames.joinToString(", "))
-        if (r.done.isNotEmpty()) append("\n✓ ").append(r.done.joinToString(", "))
-        if (r.failed.isNotEmpty()) append("\n✗ ").append(r.failed.joinToString(", "))
-        if (r.pendingIntents.isNotEmpty()) append("\nConfirm remaining toggles (enable Shizuku for silent mode)")
     }
 
     private fun toast(msg: String) = Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()

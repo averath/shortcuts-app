@@ -24,12 +24,16 @@ class MainActivity : ComponentActivity() {
     private val scannedTags = MutableSharedFlow<String>(extraBufferCapacity = 1)
     private val nfc: NfcAdapter? by lazy { NfcAdapter.getDefaultAdapter(this) }
 
-    private val btPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) btPermission.launch(Manifest.permission.BLUETOOTH_CONNECT)
+        // Bluetooth state checks (12+) and the start/finish notifications (13+).
+        buildList {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) add(Manifest.permission.BLUETOOTH_CONNECT)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
+        }.takeIf { it.isNotEmpty() }?.let { permissions.launch(it.toTypedArray()) }
         val app = app
         setContent {
             val dark = isSystemInDarkTheme()
