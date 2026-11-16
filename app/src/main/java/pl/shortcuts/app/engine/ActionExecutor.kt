@@ -11,6 +11,8 @@ import android.os.Build
 import android.provider.Settings
 import android.telephony.TelephonyManager
 import androidx.core.content.ContextCompat
+import pl.shortcuts.app.helper.BluetoothHelperClient
+import pl.shortcuts.app.helper.HelperState
 import pl.shortcuts.app.model.Action
 import pl.shortcuts.app.model.Toggle
 import pl.shortcuts.app.shizuku.ShizukuShell
@@ -26,13 +28,18 @@ data class ExecutionReport(
 )
 
 /**
- * Two execution strategies:
+ * Execution strategies, tried in order:
+ *  0. Bluetooth only: companion BT helper APK (targetSdk 32) → silent, no Shizuku, survives reboots.
  *  1. Shizuku available + permitted → silent `svc …` shell commands (works for all three toggles).
  *  2. Otherwise → public API fallback: system dialog/panel the user taps once.
  *     (Since Android 10 / API 29+ targets, apps may not toggle Wi-Fi/Bluetooth silently,
  *     and mobile data has never been toggleable by normal apps.)
  */
-class ActionExecutor(private val context: Context, private val shell: ShizukuShell) {
+class ActionExecutor(
+    private val context: Context,
+    private val shell: ShizukuShell,
+    private val btHelper: BluetoothHelperClient,
+) {
 
     suspend fun execute(actions: List<Action>, ruleNames: List<String>): ExecutionReport {
         val done = mutableListOf<String>()
@@ -40,16 +47,26 @@ class ActionExecutor(private val context: Context, private val shell: ShizukuShe
         val intents = linkedMapOf<String, Intent>() // de-duplicated by key, kept in order
 
         val launches = mutableListOf<Intent>()
-        val needsShell = actions.any { it is Action.SetToggle }
-        val useShell = needsShell && shell.awaitReady()
+        // Resolved lazily: a Bluetooth-only rule handled by the helper never waits for Shizuku.
+        var shellReady: Boolean? = null
+        suspend fun useShell() = shellReady ?: shell.awaitReady().also { shellReady = it }
+        val helperReady by lazy { btHelper.refresh() == HelperState.READY }
         for (action in actions) {
             when (action) {
                 is Action.SetToggle -> {
                     val label = "${action.target.label} ${if (action.enabled) "on" else "off"}"
                     if (isAlready(action.target, action.enabled)) { done += "$label (already)"; continue }
-                    if (useShell) {
+                    var helperError: String? = null
+                    if (action.target == Toggle.BLUETOOTH && helperReady) {
+                        val result = btHelper.setEnabled(action.enabled)
+                        if (result.ok) { done += label; continue }
+                        helperError = result.output.trim().take(80)
+                    }
+                    if (useShell()) {
                         val result = shell.exec(shellCommand(action.target, action.enabled))
                         if (result.ok) done += label else failed += "$label: ${result.output.trim().take(80)}"
+                    } else if (helperError != null) {
+                        failed += "$label: $helperError"
                     } else {
                         fallbackIntent(action.target, action.enabled)?.let { (key, intent) -> intents[key] = intent }
                             ?: run { failed += "$label: not possible without Shizuku" }

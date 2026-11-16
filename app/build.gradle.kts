@@ -15,8 +15,8 @@ android {
         applicationId = "pl.shortcuts.app"
         minSdk = 29          // Android 10: needed for Settings.Panel fallbacks
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
     }
 
     // Release signing is read from keystore.properties (not committed). Example:

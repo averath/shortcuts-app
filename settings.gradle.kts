@@ -6,4 +6,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "NfcShortcuts"
-include(":app")
+include(":app", ":bthelper")

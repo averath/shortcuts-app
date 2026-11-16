@@ -66,6 +66,8 @@ import pl.shortcuts.app.model.Rule
 import pl.shortcuts.app.model.Toggle
 import pl.shortcuts.app.model.Trigger
 import pl.shortcuts.app.model.describe
+import pl.shortcuts.app.helper.BluetoothHelperClient
+import pl.shortcuts.app.helper.HelperState
 import pl.shortcuts.app.shizuku.ShizukuShell
 import pl.shortcuts.app.shizuku.ShizukuState
 
@@ -74,12 +76,15 @@ import pl.shortcuts.app.shizuku.ShizukuState
 fun RulesScreen(
     repository: RuleRepository,
     shell: ShizukuShell,
+    btHelper: BluetoothHelperClient,
     scannedTags: SharedFlow<String>,
     nfcState: NfcState,
     onRun: (String) -> Unit,
 ) {
     val rules by repository.rules.collectAsState()
     val shizuku by shell.state.collectAsState()
+    val helper by btHelper.state.collectAsState()
+    val context = LocalContext.current
     var editing by remember { mutableStateOf<Rule?>(null) }
     var creating by remember { mutableStateOf(false) }
 
@@ -104,6 +109,7 @@ fun RulesScreen(
                 )
             }
             item { ShizukuCard(shizuku, shell::requestPermission) }
+            item { BtHelperCard(helper) { btHelper.setupIntent()?.let(context::startActivity) } }
             if (rules.isEmpty()) item {
                 Text(
                     "No rules yet. Tap “New rule”, scan a tag and pick the actions to run – or use the Sleep preset.",
@@ -154,6 +160,25 @@ private fun ShizukuCard(state: ShizukuState, onGrant: () -> Unit) = Card(modifie
             style = MaterialTheme.typography.bodyMedium,
         )
         if (state == ShizukuState.NO_PERMISSION) FilledTonalButton(onClick = onGrant) { Text("Grant access") }
+    }
+}
+
+@Composable
+private fun BtHelperCard(state: HelperState, onOpen: () -> Unit) = Card(modifier = Modifier.fillMaxWidth()) {
+    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Bluetooth helper", style = MaterialTheme.typography.titleMedium)
+        Text(
+            when (state) {
+                HelperState.READY -> "Active – Bluetooth is switched silently, even without Shizuku and after reboots."
+                HelperState.NO_PERMISSION -> "Installed, but needs the Bluetooth (Nearby devices) permission. Open it once and grant it."
+                HelperState.REJECTED -> "Installed, but signed with a different key than this app. Rebuild both APKs with the same keystore."
+                HelperState.NOT_INSTALLED -> "Optional. Install NfcShortcuts-BtHelper.apk to switch Bluetooth without Shizuku."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        if (state == HelperState.NO_PERMISSION || state == HelperState.READY) {
+            FilledTonalButton(onClick = onOpen) { Text(if (state == HelperState.READY) "Open helper" else "Grant permission") }
+        }
     }
 }
 

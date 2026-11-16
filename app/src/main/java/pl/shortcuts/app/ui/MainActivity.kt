@@ -15,7 +15,10 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.platform.LocalContext
 import android.os.Build
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 import pl.shortcuts.app.app
 
 class MainActivity : ComponentActivity() {
@@ -48,6 +51,7 @@ class MainActivity : ComponentActivity() {
                 RulesScreen(
                     repository = app.repository,
                     shell = app.shell,
+                    btHelper = app.btHelper,
                     scannedTags = scannedTags,
                     nfcState = when {
                         nfc == null -> NfcState.UNSUPPORTED
@@ -63,6 +67,8 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         app.shell.refresh()
+        // Helper status is a cross-process call – keep it off the main thread.
+        lifecycleScope.launch(Dispatchers.IO) { app.btHelper.refresh() }
         // While the app is open, read tags directly instead of letting the system dispatch them.
         nfc?.enableReaderMode(
             this,

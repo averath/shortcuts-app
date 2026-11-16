@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Android 12+ (runtime permission, granted once in the helper's screen). -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- Android 11 and older. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@android:style/Theme.DeviceDefault.DayNight">
+
+        <!-- One-time setup screen: grant the Bluetooth permission and test the switch. -->
+        <activity
+            android:name=".SetupActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            IPC endpoint for NFC Shortcuts. Exported, but every call() verifies that the caller is
+            pl.shortcuts.app AND is signed with the same certificate as this helper.
+        -->
+        <provider
+            android:name=".BluetoothControlProvider"
+            android:authorities="pl.shortcuts.bthelper.control"
+            android:exported="true" />
+    </application>
+</manifest>

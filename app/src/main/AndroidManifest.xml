@@ -19,6 +19,9 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <!-- Companion Bluetooth helper (module :bthelper). -->
+        <package android:name="pl.shortcuts.bthelper" />
+        <provider android:authorities="pl.shortcuts.bthelper.control" />
     </queries>
 
     <uses-sdk tools:overrideLibrary="rikka.shizuku.api, rikka.shizuku.provider, rikka.shizuku.shared, rikka.shizuku.aidl" />
